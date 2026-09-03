@@ -1,5 +1,5 @@
 system/
 blockpacks/
 __pycache__/
-./config.txt
-./minescript.py
+config.txt
+minescript.py
