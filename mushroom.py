@@ -1,31 +1,40 @@
 from minescript import player_position, execute, player_inventory_select_slot, player_press_attack, player_press_right, \
-    player_press_forward, player_press_left, EventQueue, screen_name, queue, echo
-from time import sleep,time
+    player_press_forward, player_press_left, EventQueue, screen_name, queue, echo, entities, player_press_use, player_orientation
+from time import sleep
 from random import uniform
 from utils.timer import FpsTimer
 from utils.directions import Directions
+from rotation import look_at
 #variables
-starting_waypoint=[48,-61,-46]
-ending_waypoint=[138,-61,-46]
+starting_waypoint=[48,67,49]
+ending_waypoint=[138,67,49]
 last_cords=starting_waypoint
-cords_differences=[[0,0,284],[6,0,0],[0,0,-284],[6,0,0]]
-long_press=(0.5,3)
-short_press=(0.1,0.4)
+# cords_differences=[[0,0,189],[6,0,0],[0,0,-189],[6,0,0]]
+long_walk_hold=(0.5,1.3)
+short_walk_hold=(0.1,0.4)
+vacuum_hold=(0.8,1.1)
+be_press=(0.1,0.35)
 step=0
-waypoints=[[48, -61, -46], [48, -61, 238], [54, -61, 238], [54, -61, -46], [60, -61, -46], [60, -61, 238], [66, -61, 238], [66, -61, -46], [72, -61, -46], [72, -61, 238], [78, -61, 238], [78, -61, -46], [84, -61, -46], [84, -61, 238], [90, -61, 238], [90, -61, -46], [96, -61, -46], [96, -61, 238], [102, -61, 238], [102, -61, -46], [108, -61, -46], [108, -61, 238], [114, -61, 238], [114, -61, -46], [120, -61, -46], [120, -61, 238], [126, -61, 238], [126, -61, -46], [132, -61, -46], [132, -61, 238], [138, -61, 238], [138, -61, -46], [138, -61, -46]]
+waypoints=[[48,67,49],[48, 67, 238], [54, 67, 238], [54, 67, 49], [60, 67, 49], [60, 67, 238], [66, 67, 238], [66, 67, 49], [72, 67, 49], [72, 67, 238], [78, 67, 238], [78, 67, 49], [84, 67, 49], [84, 67, 238], [90, 67, 238], [90, 67, 49], [96, 67, 49], [96, 67, 238], [102, 67, 238], [102, 67, 49], [108, 67, 49], [108, 67, 238], [114, 67, 238], [114, 67, 49], [120, 67, 49], [120, 67, 238], [126, 67, 238], [126, 67, 49], [132, 67, 49], [132, 67, 238], [138, 67, 238], [138, 67, 49]]
 
 
-def add_vector(a,b):
-    return [x+y for x,y in zip(a,b)]
-
-def fill_way(start,stop,cord_diff,waypoints):
-    step=0
-    next_cord=start
-    while next_cord!=stop:
-        next_cord=add_vector(next_cord,cord_diff[step%4])
-        waypoints.append(next_cord)
-        step+=1
-    waypoints.append(stop)
+#=======WAYPOINT CALCULATION=======
+#
+# def add_vector(a,b):
+#     return [x+y for x,y in zip(a,b)]
+#
+# def fill_way(start,stop,cord_diff,waypoints):
+#     step=0
+#     next_cord=start
+#     waypoints+=start
+#     while next_cord!=stop:
+#         next_cord=add_vector(next_cord,cord_diff[step%4])
+#         waypoints.append(next_cord)
+#         step+=1
+# fill_way(starting_waypoint,ending_waypoint,cords_differences,waypoints)
+# print(waypoints)
+#
+#===================================
 
 def in_area(cords, start, end):
     if  (start[0]<=cords[0]<=end[0] or start[0]>=cords[0]>=end[0]) and (start[1]<=cords[1]<=end[1] or start[1]>=cords[1]>=end[1]) and (start[2]<=cords[2]<=end[2] or start[2]>=cords[2]>=end[2]):
@@ -41,106 +50,96 @@ def which_way(start,end):
         return Directions.FORWARD
     return False
 
-def key_detection(key, action):
-    with EventQueue() as event_queue:
-        event_queue.register_key_listener()
-        while True:
-            event = event_queue.get()
-            if screen_name() is None and event.action==1:
-                if event.key == key:
-                    action()
-
 def stop_moving():
     player_press_forward(False)
     player_press_right(False)
     player_press_left(False)
 
-def wait_until(statement,interval=0.05):
-    print(statement)
-    while not statement():
-        sleep(interval)
+def distance(a,b):
+    return (a[0]-b[0])**2 + (a[1]-b[1])**2
 
+PESTS={"Silverfish","Bat"}
+def pest():
+    if any(e.name in PESTS for e in entities(max_distance=11)):
+        stop_moving()
+        sleep(uniform(*be_press))
+        player_press_attack(False)
+        sleep(uniform(*be_press))
+        player_inventory_select_slot(2)
+        sleep(uniform(*be_press))
+        while all_entities:=[e for e in entities(max_distance=14) if e.name in PESTS]:
+            vacuum(all_entities[0].position)
+        player_inventory_select_slot(1)
+        while distance(player_orientation(),(-90,3))>0.1:
+            player_press_attack(True)
+            player_press_attack(False)
+            sleep(uniform(0.1,0.15))
+        player_inventory_select_slot(0)
+        player_press_attack(True)
+        sleep(uniform(*be_press))
+        return True
+    return False
 
-"""
-if [int(x) for x in player_position()]!=starting_cords:
-    execute(f"/home")
-while True:
-    sleep(uniform(*short_press))
-    player_inventory_select_slot(0)
-    sleep(uniform(*short_press))
-   # player_press_attack(True)
-    while [int(x) for x in player_position()]!=ending_cord:
-        match step:
-            case 0:
-                next_cords=add_vector(next_cords,cords_differences[step])
-                step = 1
-                print(next_cords)
-                player_press_right(True)
-                wait_until(lambda : [int(x) for x in player_position()]==next_cords)
-                sleep(uniform(*long_press))
-                player_press_right(False)
-            case 1:
-                next_cords=add_vector(next_cords,cords_differences[step])
-                step = 2
-                player_press_forward(True)
-                wait_until(lambda : [int(x) for x in player_position()]==next_cords)
-                sleep(uniform(*short_press))
-                player_press_forward(False)
-            case 2:
-                next_cords=add_vector(next_cords,cords_differences[step])
-                step = 3
-                player_press_left(True)
-                wait_until(lambda : [int(x) for x in player_position()]==next_cords)
-                sleep(uniform(*long_press))
-                player_press_left(False)
-            case 3:
-                next_cords=add_vector(next_cords,cords_differences[step])
-                step = 0
-                player_press_forward(True)
-                wait_until(lambda : [int(x) for x in player_position()] == next_cords)
-                sleep(uniform(*short_press))
-                player_press_forward(False)
-    sleep(uniform(*long_press))
+def vacuum(cords):
+    look_at(*cords)
+    sleep(uniform(*be_press))
+    player_press_use(True)
+    sleep(uniform(*vacuum_hold))
+    player_press_use(False)
+    sleep(uniform(*short_walk_hold))
+
+def looping():
+    global step
+    step = 0
+    sleep(uniform(*long_walk_hold))
     player_press_attack(False)
-    sleep(uniform(*long_press))
-    execute(f"/home")
-"""
+    stop_moving()
+    sleep(uniform(*long_walk_hold))
+    execute("home")
+    sleep(uniform(*be_press))
+    player_press_attack(True)
+    player_press_right(True)
+    sleep(uniform(0.8, 1.2))
+    player_press_right(False)
+
 timer = FpsTimer(100)
+counter=0
 with EventQueue() as event_queue:
     event_queue.register_key_listener()
     running = True
     if [int(x) for x in player_position()] != starting_waypoint:
         execute("home")
-    sleep(uniform(*short_press))
+    sleep(uniform(*short_walk_hold))
     player_inventory_select_slot(0)
-    sleep(uniform(*short_press))
+    sleep(uniform(*short_walk_hold))
+    player_press_attack(True)
     while running:
         timer.tick()
         curr_cords = [int(x) for x in player_position()]
 
-        if curr_cords==ending_waypoint:
-            step=0
-            sleep(uniform(*long_press))
-            player_press_attack(False)
-            sleep(uniform(*long_press))
-            execute("home")
-            sleep(uniform(*short_press))
-            player_press_attack(True)
+        if not in_area(curr_cords,waypoints[step],waypoints[step+1]):
+            counter+=1
+            if counter>=100:
+                running = False
+                echo("exited area")
+                continue
+        else:
+            counter=0
+
+        if pest():
             continue
 
+        if curr_cords==ending_waypoint:
+            looping()
+            continue
 
         if curr_cords==waypoints[step+1]:
             step+=1
             if which_way(waypoints[step],waypoints[step+1])==Directions.LEFT or which_way(waypoints[step],waypoints[step+1])==Directions.RIGHT:
-                sleep(uniform(*short_press))
+                sleep(uniform(*short_walk_hold))
                 stop_moving()
             elif which_way(waypoints[step],waypoints[step+1])==Directions.FORWARD:
-                sleep(uniform(*long_press))
-
-        if not in_area(curr_cords,waypoints[step],waypoints[step+1]):
-            running = False
-            echo("exited area")
-            continue
+                sleep(uniform(*long_walk_hold))
 
         direction = which_way(waypoints[step],waypoints[step+1])
         match direction:
