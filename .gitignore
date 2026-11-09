@@ -3,3 +3,7 @@ blockpacks/
 __pycache__/
 config.txt
 minescript.py
+client_cert.der
+client_key.pem
+.idea/
+*.iml

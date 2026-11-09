@@ -1,21 +1,30 @@
 from minescript import player_position, execute, player_inventory_select_slot, player_press_attack, player_press_right, \
-    player_press_forward, player_press_left, EventQueue, screen_name, queue, echo, entities, player_press_use, player_orientation
+    player_press_forward, player_press_left, EventQueue,  queue, echo, entities, player_press_use, player_orientation
 from time import sleep
 from random import uniform
 from utils.timer import FpsTimer
 from utils.directions import Directions
-from rotation import look_at
-#variables
+from utils.rotation import look_at
+#---------------------------------------
+#            CONFIGURATION
+#---------------------------------------
+long_reaction_time=(0.5,1.3)
+vacuum_hold=(0.8,1.1)
+reaction_time=(0.2,0.4)
+#=======================================
+
+
+
+#=======================================
+#              COORDINATES
+#=======================================
 starting_waypoint=[48,67,49]
 ending_waypoint=[138,67,49]
-last_cords=starting_waypoint
-# cords_differences=[[0,0,189],[6,0,0],[0,0,-189],[6,0,0]]
-long_walk_hold=(0.5,1.3)
-short_walk_hold=(0.1,0.4)
-vacuum_hold=(0.8,1.1)
-be_press=(0.1,0.35)
+cords_differences=[[0,0,189],[6,0,0],[0,0,-189],[6,0,0]]
+
 step=0
 waypoints=[[48,67,49],[48, 67, 238], [54, 67, 238], [54, 67, 49], [60, 67, 49], [60, 67, 238], [66, 67, 238], [66, 67, 49], [72, 67, 49], [72, 67, 238], [78, 67, 238], [78, 67, 49], [84, 67, 49], [84, 67, 238], [90, 67, 238], [90, 67, 49], [96, 67, 49], [96, 67, 238], [102, 67, 238], [102, 67, 49], [108, 67, 49], [108, 67, 238], [114, 67, 238], [114, 67, 49], [120, 67, 49], [120, 67, 238], [126, 67, 238], [126, 67, 49], [132, 67, 49], [132, 67, 238], [138, 67, 238], [138, 67, 49]]
+last_cords=starting_waypoint
 
 
 #=======WAYPOINT CALCULATION=======
@@ -62,11 +71,11 @@ PESTS={"Silverfish","Bat"}
 def pest():
     if any(e.name in PESTS for e in entities(max_distance=11)):
         stop_moving()
-        sleep(uniform(*be_press))
+        sleep(uniform(*reaction_time))
         player_press_attack(False)
-        sleep(uniform(*be_press))
+        sleep(uniform(*reaction_time))
         player_inventory_select_slot(2)
-        sleep(uniform(*be_press))
+        sleep(uniform(*reaction_time))
         while all_entities:=[e for e in entities(max_distance=14) if e.name in PESTS]:
             vacuum(all_entities[0].position)
         player_inventory_select_slot(1)
@@ -76,27 +85,27 @@ def pest():
             sleep(uniform(0.1,0.15))
         player_inventory_select_slot(0)
         player_press_attack(True)
-        sleep(uniform(*be_press))
+        sleep(uniform(*reaction_time))
         return True
     return False
 
 def vacuum(cords):
     look_at(*cords)
-    sleep(uniform(*be_press))
+    sleep(uniform(*reaction_time))
     player_press_use(True)
     sleep(uniform(*vacuum_hold))
     player_press_use(False)
-    sleep(uniform(*short_walk_hold))
+    sleep(uniform(*reaction_time))
 
 def looping():
     global step
     step = 0
-    sleep(uniform(*long_walk_hold))
+    sleep(uniform(*long_reaction_time))
     player_press_attack(False)
     stop_moving()
-    sleep(uniform(*long_walk_hold))
+    sleep(uniform(*long_reaction_time))
     execute("home")
-    sleep(uniform(*be_press))
+    sleep(uniform(*reaction_time))
     player_press_attack(True)
     player_press_right(True)
     sleep(uniform(0.8, 1.2))
@@ -109,9 +118,9 @@ with EventQueue() as event_queue:
     running = True
     if [int(x) for x in player_position()] != starting_waypoint:
         execute("home")
-    sleep(uniform(*short_walk_hold))
+    sleep(uniform(*reaction_time))
     player_inventory_select_slot(0)
-    sleep(uniform(*short_walk_hold))
+    sleep(uniform(*reaction_time))
     player_press_attack(True)
     while running:
         timer.tick()
@@ -136,10 +145,10 @@ with EventQueue() as event_queue:
         if curr_cords==waypoints[step+1]:
             step+=1
             if which_way(waypoints[step],waypoints[step+1])==Directions.LEFT or which_way(waypoints[step],waypoints[step+1])==Directions.RIGHT:
-                sleep(uniform(*short_walk_hold))
+                sleep(uniform(*reaction_time))
                 stop_moving()
             elif which_way(waypoints[step],waypoints[step+1])==Directions.FORWARD:
-                sleep(uniform(*long_walk_hold))
+                sleep(uniform(*long_reaction_time))
 
         direction = which_way(waypoints[step],waypoints[step+1])
         match direction:
